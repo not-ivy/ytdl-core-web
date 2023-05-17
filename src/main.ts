@@ -16,6 +16,7 @@ app.get("/", (ctx) => {
       <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ" class="pure-input-1-4" required />
       <button type="submit" class="pure-button pure-button-primary">Download</button>
       <input type="hidden" id="ip" name="ip" />
+      <span class="pure-form-message">Your IP will be collected for verification purposes</span>
       <div class="cf-turnstile" data-sitekey="${Deno.env.get(
         "TURNSTILE_SITE_KEY"
       )}" style="margin-top: 2rem;"></div>
@@ -56,7 +57,7 @@ app.get("/dl", async (ctx) => {
 
   if (!turnstileRes.success) return ctx.text("Turnstile verification failed");
 
-  console.log(`Downloading ${url}`);
+  console.log(`${ip} is downloading ${url}`);
 
   const stream = await ytdl(url, {
     quality: "highestaudio",
