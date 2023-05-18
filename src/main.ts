@@ -2,31 +2,24 @@ import "https://deno.land/std@0.187.0/dotenv/load.ts";
 import cheetah from "https://deno.land/x/cheetah@v0.7.1/mod.ts";
 import { serve } from "https://deno.land/std@0.187.0/http/server.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.2/mod.ts";
-import * as $ from "https://deno.land/x/scale@v0.11.2/mod.ts";
+import zod, { z } from 'https://deno.land/x/cheetah@v0.7.1/validator/zod.ts'
 
-const app = new cheetah();
+const app = new cheetah({ validator: zod });
 
 app.get("/", (ctx) => {
   ctx.res.header("Content-Type", "text/html");
   ctx.res.text(Deno.readTextFileSync("./index.html").replace("$TURNSTILE_SITE_KEY", Deno.env.get("TURNSTILE_SITE_KEY") || ""));
 });
 
-const $dlFormData = $.object(
-  $.field("url", $.str),
-  $.field("cf-turnstile-response", $.str),
-  $.optionalField("ip", $.str),
-);
-
-app.post("/dl", async (ctx) => {
-  const dlFormData = Object.fromEntries(await ctx.req.formData() || []);
-
-  if (!$.is($dlFormData, dlFormData)) {
-    return ctx.res.text("Invalid form data");
-  }
-
+app.post("/dl", {
+  body: z.object({
+    url: z.string(),
+    "cf-turnstile-response": z.string(),
+  })
+}, async (ctx) => {
   const formData = new FormData();
   formData.append("secret", Deno.env.get("TURNSTILE_SECRET_KEY")!);
-  formData.append("response", dlFormData["cf-turnstile-response"]);
+  formData.append("response", ctx.req.body["cf-turnstile-response"]);
   formData.append("ip", ctx.req.ip || "");
 
   const turnstileRes: { success: boolean } = await (
@@ -42,7 +35,7 @@ app.post("/dl", async (ctx) => {
     ctx.res.text("Turnstile verification failed");
   }
 
-  const stream = await ytdl("https://www.youtube.com/watch?v=FjCVsnYbS58", {
+  const stream = await ytdl(ctx.req.body.url, {
     quality: "highestaudio",
   });
 

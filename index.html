@@ -13,17 +13,4 @@
     <span class="pure-form-message">Your IP will be collected for verification purposes</span>
     <div class="cf-turnstile" data-sitekey="$TURNSTILE_SITE_KEY" style="margin-top: 2rem"></div>
   </fieldset>
-  <script>
-    document.querySelector("form").addEventListener("submit", (e) => {
-      e.stopImmediatePropagation();
-      fetch("https://ifconfig.me/ip")
-        .then((res) => res.text())
-        .then((ip) => {
-          document.querySelector("#ip").value = ip;
-        })
-        .then(() => {
-          document.querySelector("form").submit();
-        });
-    });
-  </script>
 </form>
