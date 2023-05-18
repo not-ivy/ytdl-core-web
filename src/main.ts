@@ -41,13 +41,20 @@ app.post("/dl", async (ctx) => {
     return "Turnstile verification failed";
   }
 
-  const stream = await ytdl(dlFormData.url, {
-    quality: "highestaudio",
-  });
+  console.log(`${ctx.req.ip} is downloading ${dlFormData.url}`)
 
-  ctx.res.header("Content-Type", "video/mp4");
-  ctx.res.header("Content-Disposition", `attachment; filename="${stream.info.videoDetails.videoId}.mp4"`);
-  return ctx.res.stream(stream)
+  try {
+    const stream = await ytdl(dlFormData.url, {
+      quality: "highestaudio",
+    });
+  
+    ctx.res.header("Content-Type", "video/mp4");
+    ctx.res.header("Content-Disposition", `attachment; filename="${stream.info.videoDetails.videoId}.mp4"`);
+    return ctx.res.stream(stream)
+  } catch (e) {
+    ctx.res.code(400);
+    return (e as Error).stack;
+  }
 });
 
 serve(app.fetch);
