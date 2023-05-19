@@ -3,21 +3,41 @@ import cheetah from "https://deno.land/x/cheetah@v0.7.2/mod.ts";
 import { serve } from "https://deno.land/std@0.187.0/http/server.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.2/mod.ts";
 import * as $ from "https://deno.land/x/scale@v0.11.2/mod.ts";
+import { Redis } from "https://deno.land/x/upstash_redis@v1.20.6/mod.ts";
 
 const app = new cheetah();
 
+const redis = new Redis({
+  url: Deno.env.get("UPSTASH_REDIS_URL")!,
+  token: Deno.env.get("UPSTASH_REDIS_TOKEN")!,
+});
+
 app.get("/", (ctx) => {
   ctx.res.header("Content-Type", "text/html");
-  return Deno.readTextFileSync("./index.html").replace("$TURNSTILE_SITE_KEY", Deno.env.get("TURNSTILE_SITE_KEY") || "");
+  return Deno.readTextFileSync("./index.html").replace(
+    "$TURNSTILE_SITE_KEY",
+    Deno.env.get("TURNSTILE_SITE_KEY") || ""
+  );
+});
+
+app.get("/assets/:asset", (ctx) => {
+  ctx.res.header("Cache-Control", "public, max-age=31536000, immutable");
+  ctx.res.blob(
+    new Blob([Deno.readFileSync(`./assets/${ctx.req.param("asset")}`)])
+  );
+});
+
+app.get("/count", async () => {
+  return (await redis.get("count")) ?? "0";
 });
 
 const $dlFormData = $.object(
   $.field("url", $.str),
-  $.field("cf-turnstile-response", $.str),
+  $.field("cf-turnstile-response", $.str)
 );
 
 app.post("/dl", async (ctx) => {
-  const dlFormData = Object.fromEntries(await ctx.req.formData() || []);
+  const dlFormData = Object.fromEntries((await ctx.req.formData()) || []);
 
   if (!$.is($dlFormData, dlFormData)) {
     ctx.res.code(400);
@@ -41,16 +61,25 @@ app.post("/dl", async (ctx) => {
     return "Turnstile verification failed";
   }
 
-  console.log(`${ctx.req.ip} is downloading ${dlFormData.url}`)
+  console.log(`${ctx.req.ip} is downloading ${dlFormData.url}`);
 
   try {
     const stream = await ytdl(dlFormData.url, {
       quality: "highestaudio",
     });
-  
+
     ctx.res.header("Content-Type", "video/mp4");
-    ctx.res.header("Content-Disposition", `attachment; filename="${stream.info.videoDetails.videoId}.mp4"`);
-    return ctx.res.stream(stream)
+    ctx.res.header(
+      "Content-Disposition",
+      `attachment; filename="${stream.info.videoDetails.videoId}.mp4"`
+    );
+
+    await redis.set(
+      "count",
+      parseInt((await redis.get("count")) ?? "0", 10) + 1
+    );
+
+    return ctx.res.stream(stream);
   } catch (e) {
     ctx.res.code(400);
     return (e as Error).stack;

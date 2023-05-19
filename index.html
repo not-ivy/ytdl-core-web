@@ -1,15 +1,56 @@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css" integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous" />
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<form action="/dl" method="POST" style="padding: 1.5rem" class="pure-form" enctype="multipart/form-data">
+<script
+  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  async
+  defer
+></script>
+<form
+  action="/dl"
+  method="POST"
+  class="pure-form"
+  enctype="multipart/form-data"
+>
   <fieldset>
-    <legend>simple ytdl-core frontend built with deno + cheetah + purecss</legend>
+    <legend>
+      simple ytdl-core frontend [<a
+        href="https://github.com/not-ivy/ytdl-core-web"
+        >github</a
+      >]
+    </legend>
     <label for="url">URL</label>
-    <input type="url" id="url" name="url" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-      class="pure-input-1-4" required />
-    <button type="submit" class="pure-button pure-button-primary">
-      Download
-    </button>
-    <span class="pure-form-message">Your IP will be collected for verification purposes</span>
-    <div class="cf-turnstile" data-sitekey="$TURNSTILE_SITE_KEY" style="margin-top: 2rem"></div>
+    <input
+      type="url"
+      id="url"
+      name="url"
+      placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      required
+      style="width: 25%"
+    />
+    <button type="submit">Download</button>
+    <div
+      class="cf-turnstile"
+      data-sitekey="$TURNSTILE_SITE_KEY"
+      data-appearance="interaction-only"
+    ></div>
+    <hr style="margin: 1.5rem 0" />
+    <span>Download Count:</span>
+    <div id="count" style="margin-top: 1rem"></div>
   </fieldset>
+  <script>
+    fetch("/count")
+      .then((r) => r.text())
+      .then((t) => {
+        let count = t.split("");
+        count =
+          count.length < 6
+            ? Array(6 - count.length)
+                .fill("0")
+                .concat(count)
+            : count;
+        count.map((n) => {
+          document.getElementById(
+            "count"
+          ).innerHTML += `<img src="/assets/${n}.gif" style="width: 45px; height: 100px; margin-right: 0.5rem; user-select: none;">`;
+        });
+      });
+  </script>
 </form>
