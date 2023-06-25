@@ -3,14 +3,10 @@ import cheetah from "https://deno.land/x/cheetah@v0.7.2/mod.ts";
 import { serve } from "https://deno.land/std@0.187.0/http/server.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.2/mod.ts";
 import * as $ from "https://deno.land/x/scale@v0.11.2/mod.ts";
-import { Redis } from "https://deno.land/x/upstash_redis@v1.20.6/mod.ts";
 
 const app = new cheetah();
 
-const redis = new Redis({
-  url: Deno.env.get("UPSTASH_REDIS_URL")!,
-  token: Deno.env.get("UPSTASH_REDIS_TOKEN")!,
-});
+const kv = await Deno.openKv();
 
 app.get("/", (ctx) => {
   ctx.res.header("Content-Type", "text/html");
@@ -28,7 +24,8 @@ app.get("/assets/:asset", (ctx) => {
 });
 
 app.get("/count", async () => {
-  return (await redis.get("count")) ?? "0";
+  const res = await kv.get<number>(["dls"]);
+  return res.value?.toString();
 });
 
 const $dlFormData = $.object(
@@ -74,10 +71,7 @@ app.post("/dl", async (ctx) => {
       `attachment; filename="${stream.info.videoDetails.videoId}.mp4"`
     );
 
-    await redis.set(
-      "count",
-      parseInt((await redis.get("count")) ?? "0", 10) + 1
-    );
+    await kv.atomic().sum(["dls"], 1n).commit();
 
     return ctx.res.stream(stream);
   } catch (e) {
