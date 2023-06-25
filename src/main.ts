@@ -62,7 +62,7 @@ app.post("/dl", async (ctx) => {
 
   try {
     const stream = await ytdl(dlFormData.url, {
-      quality: "highestaudio",
+      quality: "highest",
     });
 
     ctx.res.header("Content-Type", "video/mp4");
